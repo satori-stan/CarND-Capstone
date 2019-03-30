@@ -16,4 +16,7 @@ class TLClassifier(object):
 
         """
         #TODO implement light color prediction
+        #image = Image.open(BytesIO(base64.b64decode(imgString)))
+        #image_array = np.asarray(image)
+        #model.predict(image_array[None, :, :, :], batch_size=1)
         return TrafficLight.UNKNOWN
