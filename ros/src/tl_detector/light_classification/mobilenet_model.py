@@ -5,14 +5,11 @@ import math
 import os
 
 import cv2
-from keras import __version__ as keras_version
-from keras.applications.mobilenet import MobileNet
-from keras.backend import tf as ktf
 from keras.callbacks import ModelCheckpoint
-from keras.layers import Input,Lambda
 import numpy as np
 
 from class_mapper import map_to
+from model import load_model
 
 # IMPORTANT: Keep the slash at the end!
 DATA_ROOT_PATH = '/tmp/data/tl_classification/'
@@ -30,7 +27,7 @@ def load_image(base_path, image_path):
     #image = cv2.cvtColor(cv2.imread(base_path + '/' + image_path), cv2.COLOR_BGR2RGB)
     return image, label
 
-def train(base_model):
+def train(weights_file):
     captures = []  #os.listdir(DATA_ROOT_PATH)
 
     for dirpath, subdirs, files in os.walk(DATA_ROOT_PATH):
@@ -84,16 +81,17 @@ def train(base_model):
     train_generator = generator(train_samples, batch_size=10)
     validation_generator = generator(validation_samples, batch_size=10)
 
-    inputs = Input(shape=(600, 800, 3))
-    resized = Lambda(lambda image: ktf.image.resize_images(image, (224, 224)))(inputs)
-    model = MobileNet(alpha=2, depth_multiplier=1, include_top=True, weights=None, classes=4, input_tensor=resized)
+    #inputs = Input(shape=(600, 800, 3))
+    #resized = Lambda(lambda image: ktf.image.resize_images(image, (224, 224)))(inputs)
+    #model = MobileNet(alpha=2, depth_multiplier=1, include_top=True, weights=None, classes=4, input_tensor=resized)
 
-    model.compile(loss='mse', optimizer='adam')
+    #model.compile(loss='mse', optimizer='adam')
 
-    if not base_model is None:
-        model.load_weights(base_model)
+    #if not base_model is None:
+    #    model.load_weights(base_model)
 
-    checkpoint = ModelCheckpoint('M_{val_loss:.4f}.h5', monitor='val_loss', verbose=1, save_best_only=True, mode='min')
+    model = load_model(weights_file)
+    checkpoint = ModelCheckpoint('M_{val_loss:.4f}.h5', monitor='val_loss', verbose=1, save_best_only=True, mode='min', save_weights_only=True)
     callbacks_list = [checkpoint]
 
     history = model.fit_generator(train_generator, steps_per_epoch=2000, epochs=30, callbacks=callbacks_list, validation_data=validation_generator, validation_steps=30, use_multiprocessing=True)
@@ -104,9 +102,9 @@ def train(base_model):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Traffic Light Classification Training")
     parser.add_argument(
-        'model_name',
+        'model_weights',
         type=str,
-        help="Path to a model file that will be fine-tuned"
+        help="Path to a weights file that will be fine-tuned"
     )
     args = parser.parse_args()
-    train(args.model_name)
+    train(args.model_weights)
