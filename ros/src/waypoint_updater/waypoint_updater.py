@@ -40,6 +40,7 @@ class WaypointUpdater(object):
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
+        rospy.Subscriber('/traffic_waypoints', Lane, self.traffic_cb)
 
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
@@ -53,6 +54,8 @@ class WaypointUpdater(object):
         # A KDTree of the 2D waypoints to easily find the ones nearer to us
         self.waypoint_tree = None
 
+        self.stopline_wp_idx = -1
+
         # Improved control over how often we are running
         self.loop()
 
@@ -62,8 +65,7 @@ class WaypointUpdater(object):
         # Run only if we are meant to and have all required data
         while not rospy.is_shutdown():
             if self.pose and self.waypoint_tree:
-                closest_idx = self.get_closest_waypoint_idx()
-                self.publish_waypoints(closest_idx)
+                self.publish_waypoints()
             rate.sleep()
 
     def get_closest_waypoint_idx(self):
@@ -86,12 +88,65 @@ class WaypointUpdater(object):
 
         return closest_idx
 
-    def publish_waypoints(self, starting_index):
+    def publish_waypoints(self):
         out = Lane()
         out.header = self.known_waypoints.header
-        #out.header.stamp = rospy.Time.now()
-        out.waypoints = self.known_waypoints.waypoints[starting_index : starting_index + LOOKAHEAD_WPS]
+        out.waypoints = self.calculate_target_waypoints()
         self.final_waypoints_pub.publish(out)
+
+    def calculate_target_waypoints(self):
+        closest_idx = self.get_closest_waypoint_idx()
+        farthest_idx = closest_idx + LOOKAHEAD_WPS
+
+        waypoints = self.known_waypoints.waypoints[closest_idx : farthest_idx]
+        if self.stopline_wp_idx == -1 or self.stopline_wp_idx >= farthest_idx:
+            return waypoints
+        else:
+            return self.calculate_deceleration(waypoints, closest_idx, self.stopline_wp_idx)
+
+    def calculate_deceleration(self, waypoints, current_index, stop_index):
+        """
+        Create a new list of waypoints to follow that slowly decreases speed to a stop
+
+        Args:
+            waypoints -- The original array of waypoints being followed
+            current_index -- The index in that list of waypoints where we are
+            stop_index -- The index in that list of waypoints where we should stop
+
+        Returns:
+            An array of waypoints with the twist commands updated to stop
+        """
+        decel_waypoints = []
+        # Make sure we are stopping *before* the obstacle
+        stop_index_ = max(current_index - stop_index - 2, 0)
+        starting_velocity = None
+        last_velocity = None
+        stop_distance = None
+        for i, wp in enumerate(waypoints):
+            p = Waypoint()
+            p.pose = wp.pose
+
+            dist = self.distance(waypoints, i, stop_index_)
+            if not stop_distance:
+                stop_distance = dist
+
+            if not starting_velocity:
+                velocity = starting_velocity = wp.twist.twist.linear.x
+            else:
+                # Slow down with a sigmoid shape
+                # TODO: Improve so that we don't stop too early
+                velocity = max(starting_velocity / (1. + math.exp(((stop_distance / 2.) - dist) / 5.)), last_velocity - MAX_DECEL)
+
+            # Make sure we don't keep creeping forward, but don't go over the max decel
+            if velocity < (MAX_DECEL - 0.1):
+                velocity = 0.
+            
+            last_velocity = velocity
+
+            # Apply modified velocity, but don't override the existing one if
+            # it is less than our target.
+            p.twist.twist.linear.x = min(velocity, wp.twist.twist.linear.x)
+            decel_waypoints.append(p)
 
     def pose_cb(self, msg):
         # Every time we get a new pose, check the list of known waypoints to
@@ -111,8 +166,8 @@ class WaypointUpdater(object):
             self.waypoint_tree = KDTree(self.waypoints_2d)
 
     def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message. Implement
-        pass
+        self.stopline_wp_idx = msg
+        rospy.logwarn(self.stopline_wp_idx)
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later

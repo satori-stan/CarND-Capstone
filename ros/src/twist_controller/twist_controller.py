@@ -83,9 +83,9 @@ class Controller(object):
         # factor to be used to limit the final steering delta. The factor
         # 1.61804 used was chosen for no special reason.
         angular_velocity_delta = abs(target_angular_velocity - self.last_angular_velocity)
-        rospy.logwarn("cl {0:f} tl {1:f} ta {2:f}, ad: {3:f}".format(current_velocity, target_linear_velocity, target_angular_velocity, angular_velocity_delta))
-        #if angular_velocity_delta > 0.01:
-        #  steering /= (1.61804 * current_velocity)
+        #rospy.logwarn("cl {0:f} tl {1:f} ta {2:f}, ad: {3:f}".format(current_velocity, target_linear_velocity, target_angular_velocity, angular_velocity_delta))
+        if angular_velocity_delta > 0.01:
+            steering /= (1.61804 * current_velocity)
         self.last_angular_velocity = target_angular_velocity
 
         # To calculate the target throttle, we need the error between the target
@@ -111,5 +111,5 @@ class Controller(object):
             required_deceleration = max(velocity_error, self.decel_limit)
             brake = self._calculate_brake(-required_deceleration)
 
-        rospy.logwarn("T: {0:f}\tB: {1:f}\t S: {2:f}".format(throttle, brake, steering))
+        #rospy.logwarn("T: {0:f}\tB: {1:f}\t S: {2:f}".format(throttle, brake, steering))
         return throttle, brake, steering
