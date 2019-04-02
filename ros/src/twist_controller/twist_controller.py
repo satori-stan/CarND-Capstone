@@ -95,7 +95,7 @@ class Controller(object):
         time_delta = timestamp - self.last_time
         self.last_time = timestamp
 
-        self.throttle_controller.step(velocity_error, time_delta)
+        throttle = self.throttle_controller.step(velocity_error, time_delta)
 
         brake = 0.
         # Apply the breaks when we are supposed to be still
