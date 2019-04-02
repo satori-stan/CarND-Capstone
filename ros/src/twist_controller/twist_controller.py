@@ -25,7 +25,7 @@ class Controller(object):
         # is clear, the maximum is heuristically set to ensure smooth
         # acceleration. The p, i and d constants have been tuned with a bit
         # of twiddling.
-        self.throttle_controller = PID(0.7459, 0.000289, 12.1355, mn=0., mx=0.2)
+        self.throttle_controller = PID(0.4, 0.01, 0., mx=0.2)
 
         # Initialize the controller for the steering. We are using here the
         # provided controller, which is mostly initialized with parameters from
