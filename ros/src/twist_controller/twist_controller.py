@@ -70,11 +70,11 @@ class Controller(object):
         steering = self.steer_controller.get_steering(target_linear_velocity,
                 target_angular_velocity, current_velocity)
 
+        # If the angle of attack was "big", adjust
         # TODO: Use constants
         if current_linear_velocity > 5.55: # Over 20km/h
-            steering *= 1.1 - (min(current_linear_velocity, 19.44) / 19.44) # 70km/h
+            steering *= 1.1 - (min(current_velocity, 19.44) / 19.44) # 70km/h
 
-        # TODO: If the angle of attack was "big", adjust
 
         # That being said... prevent steering from being too sudden. We find
         # the steering delta between two calculations and divide it by a
@@ -82,11 +82,11 @@ class Controller(object):
         # change in steering over one time the reasonable range will cause the
         # factor to be used to limit the final steering delta. The factor
         # 1.61804 used was chosen for no special reason.
-        angular_velocity_delta = abs(target_angular_velocity - self.last_angular_velocity)
+        #angular_velocity_delta = abs(target_angular_velocity - self.last_angular_velocity)
         #rospy.logwarn("cl {0:f} tl {1:f} ta {2:f}, ad: {3:f}".format(current_velocity, target_linear_velocity, target_angular_velocity, angular_velocity_delta))
-        if angular_velocity_delta > 0.01:
-            steering /= (1.61804 * current_velocity)
-        self.last_angular_velocity = target_angular_velocity
+        #if angular_velocity_delta > 0.01:
+        #    steering /= (1.61804 * current_velocity)
+        #self.last_angular_velocity = target_angular_velocity
 
         # To calculate the target throttle, we need the error between the target
         # and the current velocity values, and the time elapsed.
@@ -95,7 +95,7 @@ class Controller(object):
         time_delta = timestamp - self.last_time
         self.last_time = timestamp
 
-        throttle = 0.1 #self.throttle_controller.step(velocity_error, time_delta)
+        self.throttle_controller.step(velocity_error, time_delta)
 
         brake = 0.
         # Apply the breaks when we are supposed to be still

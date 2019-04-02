@@ -183,9 +183,9 @@ class TLDetector(object):
 
         # For training and such, come up with a filename to save this with
         #if guessed_state != light.state:
-        timestamp = rospy.Time.now()
-        filename = "/tmp/data/tl_classification/{2}/{0}_{1:07d}.jpg".format(timestamp.secs, timestamp.nsecs, light.state)
-        cv2.imwrite(filename, cv_image)
+        #timestamp = rospy.Time.now()
+        #filename = "/tmp/data/tl_classification/{2}/{0}_{1:07d}.jpg".format(timestamp.secs, timestamp.nsecs, light.state)
+        #cv2.imwrite(filename, cv_image)
 
         return guessed_state
 
@@ -215,10 +215,11 @@ class TLDetector(object):
             # The index of the stop line will be the index of the light
             light_idx = self._find_closest(x, y, self.lights_tree, self.lights_2d)
             light = self.lights[light_idx]
-            stop_line_wp_idx = self.get_closest_waypoint(stop_line_positions[light_idx][0], stop_line_positions[light_idx][1])
 
         if light:
             state = self.get_light_state(light)
+            if state == TrafficLight.RED:
+              stop_line_wp_idx = self.get_closest_waypoint(stop_line_positions[light_idx][0], stop_line_positions[light_idx][1])
             return stop_line_wp_idx, state
 
         #self.waypoints = None

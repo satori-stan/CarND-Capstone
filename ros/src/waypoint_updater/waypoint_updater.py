@@ -32,15 +32,15 @@ class WaypointUpdater(object):
         rospy.init_node('waypoint_updater')
 
         # Complete initialization only after the publishers we depend
-		# on are available.
-		#rospy.wait_for_message('/current_pose', PoseStamped)
-		#rospy.wait_for_message('/base_waypoints', Lane)
+        # on are available.
+        #rospy.wait_for_message('/current_pose', PoseStamped)
+        #rospy.wait_for_message('/base_waypoints', Lane)
 
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
-        rospy.Subscriber('/traffic_waypoints', Lane, self.traffic_cb)
+        rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
 
 
         self.final_waypoints_pub = rospy.Publisher('final_waypoints', Lane, queue_size=1)
